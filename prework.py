@@ -15,7 +15,7 @@ import os
 from IPython.display import Image
 
 
-# In[2]:
+# In[84]:
 
 competition_name = 'dog-breed-identification'
 
@@ -42,7 +42,7 @@ get_ipython().system('kg download')
 
 # ### unzip
 
-# In[3]:
+# In[86]:
 
 get_ipython().system('mkdir $dir_data/preprocessed')
 
@@ -63,14 +63,14 @@ get_ipython().magic('ls $dir_data/preprocessed/train/ -l | wc -l')
 get_ipython().magic('ls $dir_data/preprocessed/test/ -l | wc -l')
 
 
-# In[15]:
+# In[78]:
 
-rm $dir_data/preprocessed/*.zip
+get_ipython().system('mkdir $dir_data/preprocessed/test/unknown')
 
 
-# In[16]:
+# In[96]:
 
-ls $dir_data/preprocessed/
+mv $dir_data/preprocessed/test/*.jpg $dir_data/preprocessed/test/unknown
 
 
 # ### move samples to validation folder
@@ -106,6 +106,16 @@ get_ipython().system('mkdir $dir_data/sample')
 get_ipython().system('mkdir $dir_data/sample/train $dir_data/sample/test $dir_data/sample/valid')
 
 
+# In[97]:
+
+get_ipython().system('mkdir $dir_data/sample/test/unknown')
+
+
+# In[100]:
+
+mv $dir_data/sample/test/*.jpg $dir_data/sample/test/unknown
+
+
 # In[22]:
 
 utils_ds.copy_sample(
@@ -118,8 +128,8 @@ utils_ds.copy_sample(
 # In[23]:
 
 utils_ds.copy_sample(
-    dir_source=dir_data + '/preprocessed/test',
-    dir_destin=dir_data + '/sample/test',
+    dir_source=dir_data + '/preprocessed/test/unknown',
+    dir_destin=dir_data + '/sample/test/unknown',
     file_type='jpg',
     n=1200)
 

@@ -3,7 +3,7 @@
 
 # https://www.kaggle.com/gaborfodor/use-pretrained-keras-models-lb-0-3
 
-# In[2]:
+# In[1]:
 
 get_ipython().magic('matplotlib inline')
 import pandas as pd
@@ -38,14 +38,14 @@ from secrets import KAGGLE_USER, KAGGLE_PW
 
 # ### preprocessing
 
-# In[9]:
+# In[21]:
 
 INPUT_SIZE = 224
-NUM_CLASSES = 120
+NUM_CLASSES = 2
 SEED = 1987
 
 
-# In[10]:
+# In[22]:
 
 competition_name = 'dog-breed-identification'
 competition_dir = '/opt/notebooks/data/' + competition_name
@@ -53,16 +53,16 @@ raw_dir = competition_dir + '/raw'
 data_dir = competition_dir + '/unzipped'
 
 
-# In[11]:
+# In[23]:
 
 # !mkdir $data_dir
 # !cp $raw_dir/*.zip $data_dir
 # !unzip '$data_dir/*.zip' -d $data_dir 
 # !mkdir $data_dir/results
-# rm $data_dir/*.zip
+# !rm $data_dir/*.zip
 
 
-# In[12]:
+# In[24]:
 
 labels = pd.read_csv(join(data_dir, 'labels.csv'))
 sample_submission = pd.read_csv(join(data_dir, 'sample_submission.csv'))
@@ -70,7 +70,7 @@ print(len(listdir(join(data_dir, 'train'))), len(labels))
 print(len(listdir(join(data_dir, 'test'))), len(sample_submission))
 
 
-# In[7]:
+# In[25]:
 
 random_img = np.random.choice(listdir(join(data_dir,'train')))
 random_img = join(data_dir, 'train', random_img)
@@ -78,24 +78,24 @@ mimg = mpimg.imread(random_img)
 plt.imshow(mimg)
 
 
-# In[37]:
+# In[26]:
 
 from IPython.display import Image
 Image(random_img)
 
 
-# In[13]:
+# In[27]:
 
 selected_breed_list = labels.breed.value_counts().index.values[:NUM_CLASSES]
 selected_breed_list = list(selected_breed_list)
 
 
-# In[14]:
+# In[28]:
 
 labels = labels[labels.breed.isin(selected_breed_list)]
 
 
-# In[15]:
+# In[29]:
 
 # labels['target'] = 1
 # labels['rank'] = labels.groupby('breed').rank()['id']
@@ -105,13 +105,13 @@ labels = labels[labels.breed.isin(selected_breed_list)]
 y_train = pd.get_dummies(labels.breed).values
 
 
-# In[16]:
+# In[30]:
 
 le = LabelEncoder()
 y_train_encode = le.fit_transform(labels.breed.values)
 
 
-# In[17]:
+# In[31]:
 
 np.random.seed(seed=SEED)
 rnd = np.random.random(len(labels))
@@ -122,7 +122,7 @@ ytr = y_train[train_idx]
 yv = y_train[valid_idx]
 
 
-# In[18]:
+# In[32]:
 
 def read_img(img_id, train_or_test, size):
     img = image.load_img(join(data_dir, train_or_test, '%s.jpg' % img_id), target_size=size)
@@ -209,7 +209,7 @@ accuracy_score(y_train_encode[valid_idx], valid_preds)
 
 # ### Extract Xception bottleneck features
 
-# In[19]:
+# In[33]:
 
 INPUT_SIZE = 299
 POOLING = 'avg'
@@ -221,18 +221,18 @@ for i, img_id in enumerate(labels['id']):
     x_train[i] = x
 
 
-# In[ ]:
+# In[34]:
 
 Xtr = x_train[train_idx]
 Xv = x_train[valid_idx]
 
 
-# In[25]:
+# In[35]:
 
 xception_bottleneck = xception.Xception(weights='imagenet', include_top=False, pooling=POOLING)
 
 
-# In[26]:
+# In[ ]:
 
 train_x_bf = xception_bottleneck.predict(Xtr, batch_size=32, verbose=1)
 valid_x_bf = xception_bottleneck.predict(Xv, batch_size=32, verbose=1)

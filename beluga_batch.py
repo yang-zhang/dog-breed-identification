@@ -79,9 +79,19 @@ model_x = add_preprocess(base_model, xception.preprocess_input)
 bf_x=model_x.predict_generator(batches, steps=nb_batches, verbose=1)
 
 
+# In[128]:
+
+np.save(data_dir+'/results/bf_x', bf_x)
+
+
 # In[67]:
 
 bf_val_x=model_x.predict_generator(batches_val, steps=nb_batches_val, verbose=1)
+
+
+# In[129]:
+
+np.save(data_dir+'/results/bf_val_x', bf_val_x)
 
 
 # In[68]:
@@ -135,9 +145,19 @@ model_i = add_preprocess(base_model, inception_v3.preprocess_input)
 bf_i = model_i.predict_generator(batches, steps=nb_batches, verbose=1)
 
 
+# In[126]:
+
+np.save(data_dir+'/results/bf_i', bf_i)
+
+
 # In[84]:
 
 bf_val_i = model_i.predict_generator(batches_val, steps=nb_batches_val, verbose=1)
+
+
+# In[127]:
+
+np.save(data_dir+'/results/bf_val_i', bf_val_i)
 
 
 # In[85]:
@@ -215,6 +235,11 @@ bf_x_test = model_x.predict_generator(batches_test,
                                            verbose=1)
 
 
+# In[130]:
+
+np.save(data_dir+'/results/bf_x_test', bf_x_test)
+
+
 # In[106]:
 
 batches_test = gen.flow_from_directory(data_dir+'/test', shuffle=False, target_size=target_size, batch_size=batch_size)
@@ -226,6 +251,11 @@ nb_batches_test = math.ceil(batches_test.n/batch_size)
 bf_i_test = model_i.predict_generator(batches_test, 
                                            steps=nb_batches_test,
                                            verbose=1)
+
+
+# In[131]:
+
+np.save(data_dir+'/results/bf_i_test', bf_i_test)
 
 
 # In[108]:
@@ -273,4 +303,9 @@ get_ipython().system('kg config -g -u $KAGGLE_USER -p $KAGGLE_PW -c $competition
 get_ipython().system('kg submit $submission_file_name -u $KAGGLE_USER -p $KAGGLE_PW -m $description')
 
 
-# Your submission scored 
+# Your submission scored 0.30091
+
+# In[ ]:
+
+
+

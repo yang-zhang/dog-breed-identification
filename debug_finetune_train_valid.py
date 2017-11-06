@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[46]:
 
 get_ipython().magic('matplotlib inline')
 import matplotlib.pyplot as plt
@@ -15,91 +15,104 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 
 
-# In[2]:
+# In[47]:
 
 X = np.random.random((10000, 2))
 
 
-# In[3]:
+# In[48]:
 
 X.shape
 
 
-# In[4]:
+# In[49]:
 
 M = np.dot(X, [[2, 3, 1], 
                [4, 2, 1]]) + 1
 
 
-# In[5]:
+# In[50]:
 
 M.shape
 
 
-# In[6]:
+# In[51]:
 
 Y = np.dot(M, [[1], 
                [5], 
                [2]]) + 1
 
 
-# In[7]:
+# In[52]:
 
 Y.shape
 
 
+# In[53]:
+
+n = X.shape[0]
+
+
+# In[54]:
+
+rnd = np.random.random(n)
+idx_trn = rnd < 0.8
+idx_val = rnd >=0.8
+
+
+# In[55]:
+
+X_trn = X[idx_trn]
+X_val = X[idx_val]
+Y_trn = Y[idx_trn]
+Y_val = Y[idx_val]
+M_trn = M[idx_trn]
+M_val = M[idx_val]
+
+
 # ## base model
 
-# In[8]:
+# In[56]:
 
 base_model = Sequential([
     Dense(3, input_shape=(2,))
 ])
 
 
-# In[9]:
+# In[57]:
 
 base_model.summary()
 
 
-# In[10]:
+# In[58]:
 
 base_model.compile(optimizer='sgd', loss='mse')
-base_model.fit(X, M, epochs=10, verbose=0)
-
-
-# In[11]:
-
-base_model.evaluate(X, M)
+base_model.fit(X_trn, M_trn, epochs=5, verbose=1, validation_data=(X_val, M_val))
 
 
 # freeze base_model weights
 
-# In[12]:
+# In[59]:
 
 for layer in base_model.layers:
     layer.trainable = False
 
 
-# In[13]:
+# In[60]:
 
 for layer in base_model.layers:
     print(layer.get_weights())
 
 
-# In[14]:
+# In[61]:
 
-pred_mid = base_model.predict(X)
-
-
-# In[15]:
-
-base_model.layers[0].get_weights()
+pred_mid_trn = base_model.predict(X_trn)
+pred_mid_val = base_model.predict(X_val)
 
 
 # ## base_model output as dense layer input
 
-# In[16]:
+# In[65]:
 
 lm = Sequential([
     Dense(1, input_shape=(3,))
@@ -107,30 +120,20 @@ lm = Sequential([
 lm.compile(optimizer='sgd', loss='mse')
 
 
-# In[17]:
+# In[66]:
 
-lm.fit(pred_mid, Y, epochs=5, verbose=1)
+lm.fit(pred_mid_trn, Y_trn, epochs=10, verbose=1, validation_data=(pred_mid_val, Y_val))
 
 
-# In[18]:
+# In[67]:
 
 for layer in lm.layers:
     print(layer.get_weights())
 
 
-# In[19]:
-
-pred1 = lm.predict(pred_mid)
-
-
-# In[20]:
-
-lm.evaluate(pred_mid, Y)
-
-
 # ## put in one model 
 
-# In[21]:
+# In[70]:
 
 x = base_model.output
 predictions = Dense(1)(x)
@@ -140,55 +143,45 @@ for layer in base_model.layers:
 model.compile(optimizer='sgd', loss='mse')
 
 
-# In[22]:
+# In[71]:
 
-model.fit(X, Y, epochs=5, verbose=1)
-
-
-# In[23]:
-
-pred2 = model.predict(X)
+model.fit(X_trn, Y_trn, epochs=10, verbose=1, validation_data=(X_val, Y_val))
 
 
-# In[24]:
-
-model.evaluate(X, Y)
-
-
-# In[25]:
+# In[72]:
 
 for layer in model.layers:
     print(layer.get_weights())
 
 
-# In[26]:
+# In[73]:
 
 base_model.layers[0].get_weights()
 
 
-# In[27]:
+# In[74]:
 
 np.all(model.layers[1].get_weights()[0] == base_model.layers[0].get_weights()[0])
 
 
-# In[28]:
+# In[75]:
 
 np.all(model.layers[1].get_weights()[1] == base_model.layers[0].get_weights()[1])
 
 
-# In[29]:
+# In[76]:
 
 model.layers[2].get_weights()
 
 
-# In[30]:
+# In[77]:
 
 lm.layers[0].get_weights()
 
 
-# ### output of model at each layer
+# ### output of model at each layer from X_trn
 
-# In[31]:
+# In[103]:
 
 # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 inp = model.input                                           # input placeholder
@@ -196,20 +189,68 @@ outputs = [layer.output for layer in model.layers]          # all layer outputs
 functors = [K.function([inp]+ [K.learning_phase()], [out]) for out in outputs]  # evaluation functions
 
 # Testing
-layer_outs = [func([X, 1.]) for func in functors]
+layer_outs = [func([X_trn, 1.]) for func in functors]
 
 
-# In[32]:
+# In[104]:
 
-np.allclose(X, layer_outs[0])
-
-
-# In[33]:
-
-np.all(pred_mid==layer_outs[1])
+np.allclose(X_trn, layer_outs[0])
 
 
-# In[34]:
+# In[105]:
 
-np.all(pred2==layer_outs[2])
+np.all(pred_mid_trn == layer_outs[1])
+
+
+# In[106]:
+
+pred_trn = model.predict(X_trn)
+
+
+# In[107]:
+
+pred_trn
+
+
+# In[108]:
+
+np.all(pred_trn == layer_outs[2])
+
+
+# ### output of model at each layer from X_val
+
+# In[88]:
+
+# https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
+inp = model.input                                           # input placeholder
+outputs = [layer.output for layer in model.layers]          # all layer outputs
+functors = [K.function([inp]+ [K.learning_phase()], [out]) for out in outputs]  # evaluation functions
+
+# Testing
+layer_outs = [func([X_val, 1.]) for func in functors]
+
+
+# In[89]:
+
+np.allclose(X_val, layer_outs[0])
+
+
+# In[90]:
+
+np.all(pred_mid_val == layer_outs[1])
+
+
+# In[98]:
+
+pred_val = model.predict(X_val)
+
+
+# In[99]:
+
+np.all(pred_val == layer_outs[2])
+
+
+# In[ ]:
+
+
 

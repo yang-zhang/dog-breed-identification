@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[4]:
 
 import math
 import os
@@ -25,7 +25,7 @@ from sklearn.metrics import log_loss, accuracy_score
 from secrets import KAGGLE_USER, KAGGLE_PW
 
 
-# In[2]:
+# In[5]:
 
 competition_name = 'dog-breed-identification'
 data_dir = '/opt/notebooks/data/' + competition_name + '/preprocessed'
@@ -44,7 +44,7 @@ def add_preprocess(base_model, preprocess_func, inputs_shape=(299, 299, 3)):
 
 # ### train
 
-# In[3]:
+# In[6]:
 
 batches = gen.flow_from_directory(data_dir+'/train', target_size=target_size, batch_size=batch_size)
 batches_val = gen.flow_from_directory(data_dir+'/valid', shuffle=False, target_size=target_size, batch_size=batch_size)

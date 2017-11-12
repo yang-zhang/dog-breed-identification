@@ -64,30 +64,6 @@ y = to_categorical(batches.classes)
 y_val = to_categorical(batches_val.classes)
 
 
-# In[7]:
-
-base_model = xception.Xception(weights='imagenet', include_top=False, pooling='avg')
-
-model_x = add_preprocess(base_model, xception.preprocess_input)
-
-# bf_x=model_x.predict_generator(batches, steps=nb_batches, verbose=1)
-# np.save(data_dir+'/results/bf_x', bf_x)
-bf_x = np.load(data_dir+'/results/bf_x.npy')
-# bf_val_x=model_x.predict_generator(batches_val, steps=nb_batches_val, verbose=1)
-# np.save(data_dir+'/results/bf_val_x', bf_val_x)
-bf_val_x = np.load(data_dir+'/results/bf_val_x.npy')
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
 # In[4]:
 
 base_model = xception.Xception(weights='imagenet', include_top=False, pooling='avg')

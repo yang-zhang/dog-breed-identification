@@ -3,8 +3,10 @@
 
 # - https://keras.io/applications/
 # - https://github.com/yang-zhang/courses/blob/scratch/deeplearning1/nbs/lesson2.ipynb
+# - http://localhost:8887/notebooks/git/dog-breed-identification/fine_tune_2.ipynb
+# - https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html
 
-# In[52]:
+# In[10]:
 
 import math
 import os
@@ -20,7 +22,7 @@ from keras.models import Model, Sequential, load_model
 from keras.utils import to_categorical
 from keras.optimizers import RMSprop, SGD
 
-from keras.applications import xception
+from keras.applications import xception, inception_v3
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss, accuracy_score
@@ -28,45 +30,63 @@ from sklearn.metrics import log_loss, accuracy_score
 from secrets import KAGGLE_USER, KAGGLE_PW
 
 
-# In[53]:
+# In[18]:
 
 competition_name = 'dog-breed-identification'
 data_dir = '/opt/notebooks/data/' + competition_name + '/preprocessed'
-
-gen = image.ImageDataGenerator()
 batch_size = 16
-target_size=(299, 299)
-
-def add_preprocess(base_model, preprocess_func, inputs_shape=(299, 299, 3)):
-    inputs = Input(shape=inputs_shape)
-    x = Lambda(preprocess_func)(inputs)
-    outputs = base_model(x)
-    model = Model(inputs, outputs)
-    return model
 
 
 # ### train
 
 # #### first fine-tune last layer
-
-# In[60]:
-
+# create the base pre-trained model
 base_model = xception.Xception(weights='imagenet', include_top=False, pooling='avg')
+
+# add preprocessing at the bottom
 inputs = Input(shape=(299, 299, 3))
 x = Lambda(xception.preprocess_input)(inputs)
 x = base_model(x)
-outputs = Dense(120, activation='softmax', name='predictions')(x)
-model_ft = Model(inputs, outputs)
+# let's add a fully-connected layer
+x = Dense(1024, activation='relu')(x)
+# and a logistic layer 
+predictions = Dense(120, activation='softmax')(x)
+# this is the model we will train
+model = Model(inputs, predictions)
+# In[36]:
+
+# create the base pre-trained model
+base_model = inception_v3.InceptionV3(weights='imagenet', include_top=False, pooling='avg')
+
+# add preprocessing at the bottom
+inputs = Input(shape=(299, 299, 3))
+x = Lambda(inception_v3.preprocess_input)(inputs)
+x = base_model(x)
+# let's add a fully-connected layer
+x = Dense(1024, activation='relu')(x)
+# and a logistic layer 
+predictions = Dense(120, activation='softmax')(x)
+# this is the model we will train
+model = Model(inputs, predictions)
 
 
-# In[61]:
+# In[37]:
 
+# first: train only the top layers (which were randomly initialized)
+# i.e. freeze all convolutional InceptionV3 layers
 for layer in base_model.layers:
     layer.trainable = False
 
 
-# In[62]:
+# In[38]:
 
+# compile the model (should be done *after* setting layers to non-trainable)
+model.compile(optimizer=RMSprop(), loss='categorical_crossentropy', metrics=['accuracy'])
+
+
+# In[39]:
+
+gen = image.ImageDataGenerator()
 batches = gen.flow_from_directory(data_dir+'/train', target_size=target_size, batch_size=batch_size)
 batches_val = gen.flow_from_directory(data_dir+'/valid', shuffle=False, target_size=target_size, batch_size=batch_size)
 
@@ -80,84 +100,60 @@ y = to_categorical(batches.classes)
 y_val = to_categorical(batches_val.classes)
 
 
-# In[63]:
+# In[ ]:
 
-model_ft.compile(optimizer=RMSprop(), loss='categorical_crossentropy', metrics=['accuracy'])
-
-
-# In[66]:
-
-latest_filename
-
-
-# In[69]:
-
-no_of_epochs = 10
-for epoch in range(no_of_epochs):
-    print ("Running epoch: %d" % epoch)
-    model_ft.fit_generator(batches, 
+model.fit_generator(batches, 
                     steps_per_epoch=nb_batches, 
-                    epochs=1,
+                    epochs=5,
                     validation_data=batches_val,
-                    validation_steps=nb_batches_val
-                   )
-    latest_filename = data_dir+'/results/ft_top_%d_%s.h5' %  (epoch,
-        datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
-    )
-    print(latest_filename)
-    model_ft.save(latest_filename)
+                    validation_steps=nb_batches_val)
 
 
-# In[76]:
+# In[ ]:
 
-model_ft = load_model(data_dir+'/results/ft_top_3_2017-11-10-20-57.h5')
-
-
-# #### then fine-tune more layers
-
-# In[9]:
+# at this point, the top layers are well trained and we can start fine-tuning
+# convolutional layers from inception V3. We will freeze the bottom N layers
+# and train the remaining top layers.
 
 # let's visualize layer names and layer indices to see how many layers
 # we should freeze:
 for i, layer in enumerate(base_model.layers):
    print(i, layer.name)
 
-
-# In[77]:
-
-# we chose to train the top 2 xception blocks, i.e. we will freeze
-# the first 115 layers and unfreeze the rest:
-for layer in base_model.layers[:116]:
+# we chose to train the top 2 inception blocks, i.e. we will freeze
+# the first 249 layers and unfreeze the rest:
+for layer in model.layers[:249]:
    layer.trainable = False
-for layer in base_model.layers[116:]:
+for layer in model.layers[249:]:
    layer.trainable = True
-
-
-# In[79]:
 
 # we need to recompile the model for these modifications to take effect
 # we use SGD with a low learning rate
-model_ft.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
+from keras.optimizers import SGD
+model.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='categorical_crossentropy')
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
-                   
-no_of_epochs = 10
-histories = []
-for epoch in range(no_of_epochs):
-    print ("Running epoch: %d" % epoch)
-    hist = model_ft.fit_generator(batches, 
+model.fit_generator(batches, 
                     steps_per_epoch=nb_batches, 
-                    epochs=1,
+                    epochs=5,
                     validation_data=batches_val,
-                    validation_steps=nb_batches_val
-                   )
-    histories.append(hist)
-    latest_filename = data_dir+'/results/ft_%d_%s.h5' %  (epoch,
-        datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
-    )
-    print(latest_filename)
-    model_ft.save(latest_filename)
+                    validation_steps=nb_batches_val)
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
 
 
 # ### predict
@@ -224,6 +220,16 @@ get_ipython().system('kg submit $submission_file_name -m $description')
 # In[ ]:
 
 
+
+
+# In[11]:
+
+# create the base pre-trained model
+base_model = inception_v3.InceptionV3(weights='imagenet', include_top=False)
+
+# add a global spatial average pooling layer
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
 
 
 # In[ ]:
